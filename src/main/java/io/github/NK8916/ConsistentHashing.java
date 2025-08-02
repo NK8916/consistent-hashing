@@ -1,11 +1,14 @@
 package io.github.NK8916;
 
+import java.math.BigInteger;
 import java.util.TreeMap;
 
 public class ConsistentHashing {
-    private final TreeMap ring;
+    private final TreeMap<BigInteger, String> ring = new TreeMap<>();
+    private final HashFunction hashFunction;
 
-    ConsistentHashing(){
-        this.ring=new TreeMap<>();
+    ConsistentHashing(HashFunction hashFunction){
+        this.hashFunction=hashFunction;
+
     }
 }
