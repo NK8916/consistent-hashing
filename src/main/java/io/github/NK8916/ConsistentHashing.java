@@ -22,12 +22,15 @@ public class ConsistentHashing {
         ring.remove(nodeHash);
     }
 
-    public String getKey(String node){
-        BigInteger keyHash=this.hashFunction.hash(node);
+    public String getKey(String key){
+        System.out.println("Key: "+key);
+        BigInteger keyHash=this.hashFunction.hash(key);
+        System.out.println("keyHash: "+keyHash);
         Map.Entry<BigInteger,String> entry=ring.ceilingEntry(keyHash);
         if(entry==null){
             entry=ring.firstEntry();
         }
+        System.out.println("nodeHash: "+entry.getKey());
         return entry.getValue();
     }
 }
