@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.NK8916.ConsistentHashing;
 import io.github.NK8916.ConsistentHashingBuilder;
+import io.github.NK8916.HashFunction;
 import io.github.NK8916.Node;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,33 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
+
+
+class PatternHashing implements HashFunction{
+    @Override
+    public BigInteger hash(String key){
+        if(key.startsWith("node-1#")){
+            int i = Integer.parseInt(key.substring("node-1#".length()));
+            return BigInteger.valueOf(100L + 200L * i);
+        }
+
+        if(key.startsWith("node-2#")){
+            int i = Integer.parseInt(key.substring("node-2#".length()));
+            return BigInteger.valueOf(200L + 200L * i);
+        }
+
+        return switch (key) {
+            case "k_eq_min" -> BigInteger.valueOf(100);
+            case "k_lt_min" -> BigInteger.valueOf(90);
+            case "k_mid_350" -> BigInteger.valueOf(350);
+            case "k_eq_max" -> BigInteger.valueOf(200 + 200L * 299);
+            case "k_gt_max" -> BigInteger.valueOf(200 + 200L * 299 + 1);
+            default -> BigInteger.valueOf(777);
+        };
+    }
+}
+
 
 public class ConsistentHashRingTest {
     private Map<String, BigInteger> table;
@@ -51,7 +79,6 @@ public class ConsistentHashRingTest {
 
     @Test
     void whenOnlyOneNodePresent(){
-
         ConsistentHashing ring =new ConsistentHashingBuilder().withHashFunction(hasher).build();
         ring.addNode(node1);
 
@@ -72,6 +99,35 @@ public class ConsistentHashRingTest {
             beforeMap.put(key,ring.getNode(key));
         }
 
+        ring.addNode(node2);
+
+        Map<String,Node> afterMap=new HashMap<>();
+
+        for(String key:table.keySet()){
+            afterMap.put(key,ring.getNode(key));
+        }
+
+        int changeKeys=0;
+
+        for(String k: beforeMap.keySet()){
+            if(!Objects.equals(beforeMap.get(k),afterMap.get(k))){
+                changeKeys++;
+            }
+        }
+
+        assertTrue(changeKeys>0 && changeKeys<table.size());
+    }
+
+    @Test
+    void minimalRemapOnAdditionOrRemoval(){
+        ConsistentHashing ring =new ConsistentHashingBuilder().withHashFunction(hasher).build();
+        ring.addNode(node1);
+
+        Map<String,Node> beforeMap=new HashMap<>();
+
+        for(String key:table.keySet()){
+            beforeMap.put(key,ring.getNode(key));
+        }
 
         ring.addNode(node2);
 
@@ -88,8 +144,21 @@ public class ConsistentHashRingTest {
                 changeKeys++;
             }
         }
-        System.out.println("changedKeys: "+changeKeys);
-        System.out.println("table size: "+table.size());
         assertTrue(changeKeys>0 && changeKeys<table.size());
+    }
+
+    @Test
+    void testWrapAroundCondition(){
+        HashFunction patternHasher=new PatternHashing();
+        ConsistentHashing ring =new ConsistentHashingBuilder().withHashFunction(patternHasher).build();
+        ring.addNode(node1);
+        ring.addNode(node2);
+
+        assertEquals("node-1", ring.getNode("k_eq_min").getId());
+        assertEquals("node-1",ring.getNode("k_lt_min").getId());
+        assertEquals("node-2",ring.getNode("k_mid_350").getId());
+        assertEquals("node-2",ring.getNode("k_eq_max").getId());
+        assertEquals("node-1",ring.getNode("k_gt_max").getId());
+
     }
 }
