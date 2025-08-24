@@ -38,7 +38,7 @@ public class ConsistentHashingLoadTest {
     @Test
     void testOnMillionsOfKeys(){
 
-        long MAX_LIMIT=5_000_000L;
+        long MAX_LIMIT=50_000_000L;
         HashMap<String,Long> counts= new HashMap<String, Long>();
 
         for(int i=1;i<=MAX_LIMIT;i++){
@@ -50,7 +50,7 @@ public class ConsistentHashingLoadTest {
         for(String key: counts.keySet()){
             long count=counts.get(key);
             long ratio=Math.round((float) (count * 100) /MAX_LIMIT);
-            assertTrue(ratio>=3 && ratio<=4);
+            assertTrue(ratio>=3 && ratio<5);
         }
 
     }
