@@ -35,6 +35,11 @@
             <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil</artifactId>
+            <version>8.5.13</version> <!-- or latest -->
+        </dependency>
     </dependencies>
 
     <build>

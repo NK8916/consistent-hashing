@@ -29,7 +29,7 @@ public final class RingSnapshot {
         return nodes[i];
     }
 
-    public ArrayList<Node> routeN(long keyHash,int replicas){
+    public Node[] routeN(long keyHash,int replicas){
         int i=lowerBound(points,keyHash);
         ArrayList<Node> replicaNodes=new ArrayList<Node>(Math.min(replicas, nodes.length));
         String lastId=null;
@@ -41,7 +41,7 @@ public final class RingSnapshot {
                 seen++;
             }
         }
-        return replicaNodes;
+        return replicaNodes.toArray(new Node[0]);
     }
 
     private int lowerBound(long[] points,long keyHash){

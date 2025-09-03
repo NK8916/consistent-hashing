@@ -8,7 +8,7 @@ public final class ConsistentHashingBuilder {
     private List<Long> points;
     private List<Integer> order;
     private HashFunction hashFunction;
-    private int defaultVNodes;
+    private int vNodes;
     private final String SEPERATOR="#";
     private long version;
 
@@ -17,27 +17,23 @@ public final class ConsistentHashingBuilder {
         return this;
     }
 
-    public ConsistentHashingBuilder withDefaultVirtualNodes(int vNodes){
-        this.defaultVNodes=vNodes;
-        return this;
-    }
-
     public ConsistentHashingBuilder withHash(HashFunction hashFunction){
         this.hashFunction=hashFunction;
         return this;
     }
 
-    public ConsistentHashingBuilder addNode(Node node){
-        buildVNodeHash(node,this.defaultVNodes);
+    public ConsistentHashingBuilder withNodes(List<Node> nodes){
+        this.nodes=nodes;
         return this;
     }
 
-    public ConsistentHashingBuilder addNode(Node node,int vNodes){
-        buildVNodeHash(node,vNodes);
+    public ConsistentHashingBuilder withVNodes(Node node,int vNodes){
+        this.vNodes=vNodes;
         return this;
     }
 
     public RingSnapshot build(){
+        buildVNodeHash();
         sortHash();
         long[] outPoints=new long[this.points.size()];
         Node[] outNodes=new Node[this.points.size()];
@@ -49,12 +45,14 @@ public final class ConsistentHashingBuilder {
         return new RingSnapshot(this.version,outPoints,outNodes);
     }
 
-    private void buildVNodeHash(Node node,int vNodes){
-        for(int i=0;i<vNodes;i++) {
-            this.nodes.add(node);
-            this.order.add(i);
-            String key = String.format("%s%s%S", node.getId(), SEPERATOR, i);
-            this.points.add(this.hashFunction.hash(key));
+    private void buildVNodeHash(){
+        for(Node node:this.nodes){
+            for(int i=0;i<this.vNodes;i++) {
+                this.nodes.add(node);
+                this.order.add(i);
+                String key = String.format("%s%s%S", node.getId(), SEPERATOR, i);
+                this.points.add(this.hashFunction.hash(key));
+            }
         }
     }
 
