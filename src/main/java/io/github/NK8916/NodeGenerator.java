@@ -1,6 +1,4 @@
-package io.github.NK8916.hash;
-
-import io.github.NK8916.Node;
+package io.github.NK8916;
 
 import java.util.*;
 

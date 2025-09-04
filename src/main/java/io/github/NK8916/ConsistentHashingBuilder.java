@@ -4,9 +4,10 @@ import java.util.List;
 import it.unimi.dsi.fastutil.longs.LongArrays;
 
 public final class ConsistentHashingBuilder {
-    private List<Node> nodes;
-    private List<Long> points;
-    private List<Integer> order;
+    private Node[] nodes;
+    private long[] points;
+    private int[] order;
+    private Node[] owners;
     private HashFunction hashFunction;
     private int vNodes;
     private final String SEPERATOR="#";
@@ -22,45 +23,56 @@ public final class ConsistentHashingBuilder {
         return this;
     }
 
-    public ConsistentHashingBuilder withNodes(List<Node> nodes){
-        this.nodes=nodes;
+    public ConsistentHashingBuilder withNodes(Node[] nodes){
+        this.nodes= nodes;
         return this;
     }
 
-    public ConsistentHashingBuilder withVNodes(Node node,int vNodes){
+    public ConsistentHashingBuilder withVNodes(int vNodes){
         this.vNodes=vNodes;
         return this;
     }
 
-    public RingSnapshot build(){
+    public ConsistentHashing build(){
         buildVNodeHash();
         sortHash();
-        long[] outPoints=new long[this.points.size()];
-        Node[] outNodes=new Node[this.points.size()];
+        long[] outPoints=new long[this.points.length];
+        Node[] outNodes=new Node[this.points.length];
 
-        for(int i=0;i<points.size();i++){
-            outPoints[i]=points.get(this.order.get(i));
-            outNodes[i]=nodes.get(this.order.get(i));
+        for(int i=0;i<this.points.length;i++){
+            outPoints[i]=this.points[this.order[i]];
+            outNodes[i]=this.owners[this.order[i]];
         }
-        return new RingSnapshot(this.version,outPoints,outNodes);
+        RingSnapshot snapshot=new RingSnapshot(this.version,outPoints,outNodes);
+        return new ConsistentHashing(this.hashFunction,snapshot);
     }
 
     private void buildVNodeHash(){
-        for(Node node:this.nodes){
-            for(int i=0;i<this.vNodes;i++) {
-                this.nodes.add(node);
-                this.order.add(i);
-                String key = String.format("%s%s%S", node.getId(), SEPERATOR, i);
-                this.points.add(this.hashFunction.hash(key));
+        final int n=this.nodes.length;
+        final long totalLong=(long) n * (long) this.vNodes;
+
+        if(totalLong>Integer.MAX_VALUE){
+            throw new IllegalArgumentException("Too many vnodes: " + totalLong);
+        }
+
+        final int total=(int) totalLong;
+
+        this.points=new long[total];
+        this.order=new int[total];
+        this.owners=new Node[total];
+        int k=0;
+        for(int i=0;i<n;i++){
+            Node node=this.nodes[i];
+            String key = String.format("%s%s%S", node.getId(), SEPERATOR, i);
+            for(int j=0;i<this.vNodes;i++) {
+                this.owners[k]=node;
+                this.order[k]=j;
+                this.points[k]=this.hashFunction.hash(key);
             }
         }
     }
 
     private void sortHash(){
-        LongArrays.radixSortIndirect(this.order.stream()
-                .mapToInt(Integer::intValue)
-                .toArray(),points.stream()
-                .mapToLong(Long::longValue)
-                .toArray(),true);
+        LongArrays.radixSortIndirect(this.order,this.points,true);
     }
 }
