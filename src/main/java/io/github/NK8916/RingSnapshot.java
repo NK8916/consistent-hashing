@@ -1,16 +1,18 @@
 package io.github.NK8916;
 
-import java.util.ArrayList;
+import java.util.*;
 
 public final class RingSnapshot {
     private final long version;
     private final long[] points;
     private final Node[] nodes;
+    private final Node[] distinctNodes;
 
-    public RingSnapshot(long version,long[] points,Node[] nodes){
+    public RingSnapshot(long version,long[] points,Node[] nodes,Node[] distinctNodes){
         this.version=version;
         this.points=points;
         this.nodes=nodes;
+        this.distinctNodes=distinctNodes;
     }
 
     public long getVersion(){
@@ -19,6 +21,10 @@ public final class RingSnapshot {
 
     public long getSize(){
         return points.length;
+    }
+
+    public int getNodeCount(){
+        return this.distinctNodes.length;
     }
 
     public Node route(long keyHash){
@@ -30,31 +36,31 @@ public final class RingSnapshot {
     }
 
     public Node[] routeN(long keyHash,int replicas){
-        int i=lowerBound(points,keyHash);
-        ArrayList<Node> replicaNodes=new ArrayList<Node>(Math.min(replicas, nodes.length));
-        String lastId=null;
-        for(int seen=0,p=0;seen<replicas && p<nodes.length;p++){
-            Node n=nodes[(i+p)%nodes.length];
-            if(replicaNodes.isEmpty() || !n.getId().equals(lastId)){
-                replicaNodes.add(n);
-                lastId=n.getId();
-                seen++;
+        int idx = lowerBound(points,keyHash);
+
+        List<Node> out = new ArrayList<>(replicas);
+        Set<String> seen = new HashSet<>(replicas);
+        for (int i = 0; i < nodes.length && out.size() < replicas; i++) {
+            Node candidate = nodes[(idx + i) % nodes.length];
+            if (seen.add(candidate.getId())) {
+                out.add(candidate);
             }
         }
-        return replicaNodes.toArray(new Node[0]);
+        return out.toArray(new Node[0]);
+    }
+
+    public int ringSize(){
+        return this.points.length;
     }
 
     private int lowerBound(long[] points,long keyHash){
-        int low=0,high=points.length;
-
-        while(low<high){
-            int mid=(low+high)>>1;
-            if(points[mid]<keyHash){
-                low=mid+1;
-            }else{
-                high=mid;
+        int idx = Arrays.binarySearch(points, keyHash);
+        if (idx < 0) {
+            idx = -(idx + 1);
+            if (idx == points.length) {
+                idx = 0;
             }
         }
-        return low;
+        return idx;
     }
 }

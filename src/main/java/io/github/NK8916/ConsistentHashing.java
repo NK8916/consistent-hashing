@@ -20,4 +20,12 @@ public final class ConsistentHashing {
        return ringRef.get().routeN(h,count);
     }
 
+    public int ringSize(){
+       return ringRef.get().ringSize();
+    }
+
+    public int nodeCount(){
+        return this.ringRef.get().getNodeCount();
+    }
+
 }

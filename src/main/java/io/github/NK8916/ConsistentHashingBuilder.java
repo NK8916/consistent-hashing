@@ -1,6 +1,7 @@
 package io.github.NK8916;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import it.unimi.dsi.fastutil.longs.LongArrays;
 
 public final class ConsistentHashingBuilder {
@@ -38,12 +39,11 @@ public final class ConsistentHashingBuilder {
         sortHash();
         long[] outPoints=new long[this.points.length];
         Node[] outNodes=new Node[this.points.length];
-
         for(int i=0;i<this.points.length;i++){
             outPoints[i]=this.points[this.order[i]];
             outNodes[i]=this.owners[this.order[i]];
         }
-        RingSnapshot snapshot=new RingSnapshot(this.version,outPoints,outNodes);
+        RingSnapshot snapshot=new RingSnapshot(this.version,outPoints,outNodes,this.nodes);
         return new ConsistentHashing(this.hashFunction,snapshot);
     }
 
@@ -56,18 +56,18 @@ public final class ConsistentHashingBuilder {
         }
 
         final int total=(int) totalLong;
-
         this.points=new long[total];
         this.order=new int[total];
         this.owners=new Node[total];
         int k=0;
         for(int i=0;i<n;i++){
             Node node=this.nodes[i];
-            String key = String.format("%s%s%S", node.getId(), SEPERATOR, i);
-            for(int j=0;i<this.vNodes;i++) {
+            for(int j=0;j<this.vNodes;j++) {
+                String key = String.format("%s%s%S%s", node.getId(), "/", k, "/c");
                 this.owners[k]=node;
-                this.order[k]=j;
+                this.order[k]=k;
                 this.points[k]=this.hashFunction.hash(key);
+                k++;
             }
         }
     }
