@@ -4,9 +4,11 @@ import java.util.*;
 
 public final class RingSnapshot {
     private final long version;
-    private final long[] points;
-    private final Node[] nodes;
+    public final long[] points;
+    public final Node[] nodes;
     private final Node[] distinctNodes;
+
+    static long toUnsignedOrder(long x) { return x ^ Long.MIN_VALUE; }
 
     public RingSnapshot(long version,long[] points,Node[] nodes,Node[] distinctNodes){
         this.version=version;
@@ -28,7 +30,7 @@ public final class RingSnapshot {
     }
 
     public Node route(long keyHash){
-        int i=lowerBound(points,keyHash);
+        int i=lowerBound(points,toUnsignedOrder(keyHash));
         if(i==getSize()){
             i=0;
         }
@@ -54,13 +56,12 @@ public final class RingSnapshot {
     }
 
     private int lowerBound(long[] points,long keyHash){
-        int idx = Arrays.binarySearch(points, keyHash);
-        if (idx < 0) {
-            idx = -(idx + 1);
-            if (idx == points.length) {
-                idx = 0;
-            }
+        int lo = 0, hi = points.length - 1, ans = -1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            if (Long.compareUnsigned(points[mid], keyHash) >= 0) { ans = mid; hi = mid - 1; }
+            else lo = mid + 1;
         }
-        return idx;
+        return Math.max(ans, 0);
     }
 }

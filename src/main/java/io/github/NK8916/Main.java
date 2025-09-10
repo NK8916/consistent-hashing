@@ -2,9 +2,6 @@ package io.github.NK8916;
 
 import io.github.NK8916.hashImplementations.Murmur3HashFunction;
 
-import java.util.List;
-import java.util.Map;
-
 public class Main {
     public static void main(String[] args) {
         Node[] nodes= NodeGenerator.generateNode(50000).toArray(new Node[0]);

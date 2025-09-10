@@ -38,7 +38,7 @@ public class ConsistentHashingBenchmarkTest {
         }
     }
 
-    @EnabledIfSystemProperty(named = "bench", matches = "true")
+//    @EnabledIfSystemProperty(named = "bench", matches = "true")
     @Test
     void benchmark_getNodeForKey_millions() {
         // --- 1) Build a realistic cluster with your Node shape ---

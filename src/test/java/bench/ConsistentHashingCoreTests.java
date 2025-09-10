@@ -1,9 +1,6 @@
 package bench;
 
-import io.github.NK8916.ConsistentHashing;
-import io.github.NK8916.ConsistentHashingBuilder;
-import io.github.NK8916.HashFunction;
-import io.github.NK8916.Node;
+import io.github.NK8916.*;
 import io.github.NK8916.hashImplementations.MD5HashFunction;
 import io.github.NK8916.hashImplementations.Murmur3HashFunction;
 import io.github.NK8916.hashImplementations.SHA1HashFunction;
@@ -110,52 +107,60 @@ public class ConsistentHashingCoreTests {
     @Test
     void distribution_is_fair_across_nodes() {
         int nodeCount = 25;
-        int vnodesPerNode = 1024; // default you intend
-        int samples = 500_000;
+        int vnodesPerNode = 7500;
+        int samples = 5_000_000; // larger sample => much lower noise
 
+        // Nodes
         List<Node> nodes = new ArrayList<>();
         for (int i = 0; i < nodeCount; i++) {
             nodes.add(new Node("N"+i, "10.0.0."+i, 8080, "ap-south-1", Map.of()));
         }
 
-        // ⚠️ Use your REAL hash here (Murmur3_64 or xxHash64)
-        HashFunction hf = new Murmur3HashFunction(); // <- replace in your codebase
+        // Hash & router (Murmur3-128 → 64-bit mixed)
+        HashFunction hf = new Murmur3HashFunction();
         ConsistentHashing router = new ConsistentHashingBuilder()
                 .withHash(hf)
                 .withNodes(nodes.toArray(new Node[0]))
                 .withVNodes(vnodesPerNode)
                 .build();
 
+        // ---------- Routing sample (deterministic & fast) ----------
+        // Pre-index nodes for O(1) counting
+        Map<String,Integer> index = new HashMap<>();
+        for (int i = 0; i < nodeCount; i++) index.put(nodes.get(i).getId(), i);
+        long[] counts = new long[nodeCount];
 
-        // Pre-seed ALL nodes with 0 so zeros are counted in min/CV
-        Map<String, Integer> counts = new HashMap<>();
-        for (Node n : nodes) counts.put(n.getId(), 0);
-
-        // Sample
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        // Deterministic RNG → reproducible CI
+        java.util.SplittableRandom rng = new java.util.SplittableRandom(42);
         for (int i = 0; i < samples; i++) {
-            String key = "k" + rnd.nextLong();
+            // uniform, structure-free keys
+            long x = rng.nextLong();
+            String key = Long.toUnsignedString(x, 16);
             String id = router.getNodeForKey(key).getId();
-            counts.merge(id, 1, Integer::sum);
+            counts[index.get(id)]++;
         }
 
-        // Stats
+        // Stats (population CV)
         double mean = samples / (double) nodeCount;
-        int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
-        double sumSq = 0.0;
-        for (String id : counts.keySet()) {
-            int c = counts.get(id);
-            min = Math.min(min, c);
-            max = Math.max(max, c);
-            sumSq += (c - mean) * (c - mean);
+        long min = Long.MAX_VALUE, max = Long.MIN_VALUE;
+        double var = 0.0;
+        for (long c : counts) {
+            if (c < min) min = c;
+            if (c > max) max = c;
+            double d = c - mean;
+            var += d * d;
         }
-        double stddev = Math.sqrt(sumSq / nodeCount);
-        double cv = stddev / mean;
-        double maxMinRatio = max / (double) Math.max(1, min);
+        var /= nodeCount;
+        double cv = Math.sqrt(var) / mean;
+        double maxMinRatio = max / (double) Math.max(1L, min);
 
-        // Gates (slightly lenient for CI)
-        assertTrue(cv < 0.015, "CV too high: " + cv + " (min="+min+", max="+max+")");
-        assertTrue(maxMinRatio < 1.08, "Max/Min ratio too high: " + maxMinRatio);
+        System.out.printf("CV=%.4f  max/min=%.4f  mean=%.1f  min=%d  max=%d%n",
+                cv, maxMinRatio, mean, min, max);
+
+        // Gates
+        org.junit.jupiter.api.Assertions.assertTrue(cv < 0.015, "CV too high: " + cv +
+                " (min=" + min + ", max=" + max + ")");
+        org.junit.jupiter.api.Assertions.assertTrue(maxMinRatio < 1.08,
+                "Max/Min ratio too high: " + maxMinRatio);
     }
-
 }
