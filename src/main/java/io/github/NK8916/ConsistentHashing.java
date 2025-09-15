@@ -16,7 +16,7 @@ public final class ConsistentHashing {
                 ringRef.get().getVersion(),
                 Arrays.copyOf(ringRef.get().points, ringRef.get().points.length),
                 Arrays.copyOf(ringRef.get().nodes,  ringRef.get().nodes.length),
-                Arrays.copyOf(ringRef.get().distinctNodes, ringRef.get().distinctNodes.length)
+                Arrays.copyOf(ringRef.get().allNodes, ringRef.get().allNodes.length)
         );
     }
 

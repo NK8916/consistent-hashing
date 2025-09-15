@@ -6,13 +6,13 @@ public final class RingSnapshot {
     private final long version;
     public final long[] points;
     public final Node[] nodes;
-    public final Node[] distinctNodes;
+    public final Node[] allNodes;
 
-    public RingSnapshot(long version,long[] points,Node[] nodes,Node[] distinctNodes){
+    public RingSnapshot(long version,long[] points,Node[] nodes,Node[] allNodes){
         this.version=version;
         this.points=points;
         this.nodes=nodes;
-        this.distinctNodes=distinctNodes;
+        this.allNodes=allNodes;
     }
 
     public long getVersion(){
@@ -24,7 +24,7 @@ public final class RingSnapshot {
     }
 
     public int getNodeCount(){
-        return this.distinctNodes.length;
+        return this.allNodes.length;
     }
 
     public Node route(long keyHash){
