@@ -1,4 +1,5 @@
 package io.github.NK8916;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class ConsistentHashing {
@@ -9,6 +10,15 @@ public final class ConsistentHashing {
        this.hashFunction=hashFunction;
        this.ringRef=new AtomicReference<>(snapshot);
    }
+
+    public RingSnapshot debugSnapshot() {
+        return new RingSnapshot(
+                ringRef.get().getVersion(),
+                Arrays.copyOf(ringRef.get().points, ringRef.get().points.length),
+                Arrays.copyOf(ringRef.get().nodes,  ringRef.get().nodes.length),
+                Arrays.copyOf(ringRef.get().distinctNodes, ringRef.get().distinctNodes.length)
+        );
+    }
 
    public Node getNodeForKey(String key){
        long h=hashFunction.hash(key);

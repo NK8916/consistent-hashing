@@ -6,9 +6,7 @@ public final class RingSnapshot {
     private final long version;
     public final long[] points;
     public final Node[] nodes;
-    private final Node[] distinctNodes;
-
-    static long toUnsignedOrder(long x) { return x ^ Long.MIN_VALUE; }
+    public final Node[] distinctNodes;
 
     public RingSnapshot(long version,long[] points,Node[] nodes,Node[] distinctNodes){
         this.version=version;
@@ -30,16 +28,14 @@ public final class RingSnapshot {
     }
 
     public Node route(long keyHash){
-        int i=lowerBound(points,toUnsignedOrder(keyHash));
-        if(i==getSize()){
-            i=0;
-        }
+        int i=lowerBound(points,keyHash);
+        if (i == points.length) i = 0;
         return nodes[i];
     }
 
     public Node[] routeN(long keyHash,int replicas){
         int idx = lowerBound(points,keyHash);
-
+        if (idx == points.length) idx = 0;
         List<Node> out = new ArrayList<>(replicas);
         Set<String> seen = new HashSet<>(replicas);
         for (int i = 0; i < nodes.length && out.size() < replicas; i++) {
@@ -59,9 +55,12 @@ public final class RingSnapshot {
         int lo = 0, hi = points.length - 1, ans = -1;
         while (lo <= hi) {
             int mid = (lo + hi) >>> 1;
-            if (Long.compareUnsigned(points[mid], keyHash) >= 0) { ans = mid; hi = mid - 1; }
-            else lo = mid + 1;
+            if (Long.compareUnsigned(points[mid], keyHash) >= 0) {
+                ans = mid; hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
         }
-        return Math.max(ans, 0);
+        return (ans != -1) ? ans : points.length;
     }
 }

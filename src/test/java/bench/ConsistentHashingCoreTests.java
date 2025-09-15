@@ -62,46 +62,44 @@ public class ConsistentHashingCoreTests {
         }
     }
 
-    // ---------- 2) Boundary wraparound ----------
     @Test
     void boundary_wraparound_mapsToFirstOwner() {
-        // We want known vnode positions: [10, 20, 30] so a key hashing to 35 wraps to index 0
-        // We'll craft a HashFunction that returns fixed values for node vnodes and for our test key.
+        // Deterministic test hash; fail fast on any unexpected seed/key.
         class ScriptedHash implements HashFunction {
             private final Map<String, Long> script = new HashMap<>();
             void put(String s, long h) { script.put(s, h); }
             @Override public long hash(String s) {
                 Long v = script.get(s);
-                if (v != null) return v;
-                // default fallback (shouldn't be used in this test)
-                return new DemoHash64().hash(s);
+                if (v == null) throw new AssertionError("Unexpected hash input in test: " + s);
+                return v;
             }
         }
         ScriptedHash hf = new ScriptedHash();
 
-        // Nodes (ids must match seeds we script below)
         Node nA = new Node("A","10.0.0.1",8080,"ap", Map.of());
         Node nB = new Node("B","10.0.0.2",8080,"ap", Map.of());
         Node nC = new Node("C","10.0.0.3",8080,"ap", Map.of());
 
-        // Builder usually hashes "nodeId#i". We'll script one vnode per node:
-        hf.put("A#0", 10L);
-        hf.put("B#0", 20L);
-        hf.put("C#0", 30L);
+        // ⚠️ Match the builder's vnode seeding format exactly: "<id>/<i>"
+        hf.put("A/0", 10L);
+        hf.put("B/0", 20L);
+        hf.put("C/0", 30L);
 
-        // Build with 1 vnode per node to keep ring = [10,20,30]
         ConsistentHashing router = new ConsistentHashingBuilder()
                 .withHash(hf)
                 .withNodes(new Node[]{nA, nB, nC})
                 .withVNodes(1)
                 .build();
 
-        // Now craft a key that hashes to 35L (past last point 30) → wrap to index 0 → owner A
+        // Key that hashes beyond last point (30) → wrap to index 0 → owner A
         hf.put("WRAP_KEY", 35L);
+
         Node owner = router.getNodeForKey("WRAP_KEY");
         assertEquals("A", owner.getId(),
-                "Wraparound failed: hash beyond last point should map to first ring owner");
+                "Wraparound failed: hash > last point must map to first owner");
     }
+
+
 
     // ---------- 3) Distribution fairness ----------
     @Test
